@@ -12,13 +12,13 @@ pidfile="/var/run/iptv-relay.pid"
 command="/usr/sbin/daemon"
 procname="/usr/local/bin/python3"
 
+load_rc_config "$name"
+
 : ${iptv_relay_python:="/usr/local/bin/python3"}
 : ${iptv_relay_program:="/conf/iptv-relay/iptv-relay.py"}
 : ${iptv_relay_args:=""}
+: ${iptv_relay_enable:="NO"}
 
 command_args="-p ${pidfile} -o /var/log/iptv-relay.log ${iptv_relay_python} ${iptv_relay_program} ${iptv_relay_args}"
-
-load_rc_config "$name"
-: ${iptv_relay_enable:="NO"}
 
 run_rc_command "$1"
