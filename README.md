@@ -92,7 +92,7 @@ tcpdump -ni <LAN_인터페이스> 'udp and dst net 233.0.0.0/8'
 
 `forwarded_packets` 값이 주기적으로 증가하면 WAN multicast stream이 LAN으로 전달되고 있는 것입니다.
 
-셋톱박스가 leave 직후 같은 group에 다시 join하는 환경에서는 기본 5초 leave 유예가 짧은 stream 중단을 줄입니다. 필요하면 `iptv_relay_args`에 `--leave-grace 8`처럼 초 단위 값을 추가할 수 있습니다.
+셋톱박스가 leave 직후 같은 group에 다시 join하는 환경에서는 기본 5초 leave 유예가 짧은 stream 중단을 줄입니다. relay는 기본 125초 간격으로 LAN 질의를 보내며, 그룹은 300초 동안 유지합니다. 필요하면 `iptv_relay_args`에 `--leave-grace 8` 또는 `--query-interval 150`처럼 초 단위 값을 추가할 수 있습니다.
 
 ## 문제 해결
 

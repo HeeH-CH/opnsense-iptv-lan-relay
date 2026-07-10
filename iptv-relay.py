@@ -148,12 +148,13 @@ def mac_address(value):
 
 
 class IptvRelay:
-    def __init__(self, wan, lan, stb_mac, group_ttl, leave_grace):
+    def __init__(self, wan, lan, stb_mac, group_ttl, leave_grace, query_interval):
         self.wan = wan
         self.lan = lan
         self.stb_mac = stb_mac.lower()
         self.group_ttl = group_ttl
         self.leave_grace = leave_grace
+        self.query_interval = query_interval
         self.groups = {}
         self.pending_leaves = {}
         self.sequence = 1
@@ -270,7 +271,7 @@ class IptvRelay:
 
     def expire_groups(self):
         now = time.monotonic()
-        if now - self.last_query >= 60:
+        if now - self.last_query >= self.query_interval:
             self.send_general_query()
             self.last_query = now
         for group, deadline in list(self.pending_leaves.items()):
@@ -330,11 +331,19 @@ def main():
     parser.add_argument("--wan", default="igc0")
     parser.add_argument("--lan", default="igc1")
     parser.add_argument("--stb-mac", required=True, type=mac_address)
-    parser.add_argument("--group-ttl", type=int, default=180)
+    parser.add_argument("--group-ttl", type=int, default=300)
     parser.add_argument("--leave-grace", type=int, default=5)
+    parser.add_argument("--query-interval", type=int, default=125)
     args = parser.parse_args()
 
-    relay = IptvRelay(args.wan, args.lan, args.stb_mac, args.group_ttl, args.leave_grace)
+    relay = IptvRelay(
+        args.wan,
+        args.lan,
+        args.stb_mac,
+        args.group_ttl,
+        args.leave_grace,
+        args.query_interval,
+    )
 
     def stop_handler(_signum, _frame):
         relay.running = False
