@@ -1,0 +1,5 @@
+# /etc/rc.conf.d/iptv-relay 에 저장합니다.
+iptv_relay_enable="YES"
+
+# 실제 인터페이스 이름과 셋톱박스 MAC 주소로 교체합니다.
+iptv_relay_args="--wan igb0 --lan igb1 --stb-mac 00:11:22:33:44:55"

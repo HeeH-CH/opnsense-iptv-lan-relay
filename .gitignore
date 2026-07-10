@@ -1,0 +1,5 @@
+# 실제 운영 설정과 로그는 공개하지 않습니다.
+iptv-relay.conf
+*.log
+__pycache__/
+*.py[cod]
