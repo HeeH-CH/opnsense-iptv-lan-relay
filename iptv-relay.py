@@ -59,6 +59,8 @@ class PcapCapture:
         self.process = subprocess.Popen(
             [
                 "tcpdump",
+                "-B",
+                "8192",
                 "-U",
                 "-n",
                 "-i",
@@ -146,18 +148,21 @@ def mac_address(value):
 
 
 class IptvRelay:
-    def __init__(self, wan, lan, stb_mac, group_ttl):
+    def __init__(self, wan, lan, stb_mac, group_ttl, leave_grace):
         self.wan = wan
         self.lan = lan
         self.stb_mac = stb_mac.lower()
         self.group_ttl = group_ttl
+        self.leave_grace = leave_grace
         self.groups = {}
+        self.pending_leaves = {}
         self.sequence = 1
         self.running = True
         self.report_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
         self.report_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
         self.forward_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
         self.forward_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+        self.forward_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1 << 20)
         self.forward_socket.setsockopt(
             socket.IPPROTO_IP,
             socket.IP_MULTICAST_IF,
@@ -245,12 +250,13 @@ class IptvRelay:
             return
         if message_type == IGMP_V2_REPORT:
             self.groups[group] = time.monotonic() + self.group_ttl
+            self.pending_leaves.pop(group, None)
             self.send_igmp(group, IGMP_V2_REPORT)
             print(f"join {group}", flush=True)
         elif message_type == IGMP_V2_LEAVE:
-            self.groups.pop(group, None)
-            self.send_igmp(group, IGMP_V2_LEAVE)
-            print(f"leave {group}", flush=True)
+            if group in self.groups:
+                self.pending_leaves[group] = time.monotonic() + self.leave_grace
+                print(f"leave pending {group}", flush=True)
 
     def process_wan_frame(self, frame):
         packet = ipv4_packet(frame)
@@ -267,9 +273,17 @@ class IptvRelay:
         if now - self.last_query >= 60:
             self.send_general_query()
             self.last_query = now
+        for group, deadline in list(self.pending_leaves.items()):
+            if deadline <= now:
+                self.pending_leaves.pop(group, None)
+                if group in self.groups:
+                    self.groups.pop(group, None)
+                    self.send_igmp(group, IGMP_V2_LEAVE)
+                    print(f"leave {group}", flush=True)
         for group, expiry in list(self.groups.items()):
             if expiry <= now:
                 self.groups.pop(group, None)
+                self.pending_leaves.pop(group, None)
                 self.send_igmp(group, IGMP_V2_LEAVE)
                 print(f"expired {group}", flush=True)
         if now - self.last_stats >= 15:
@@ -317,9 +331,10 @@ def main():
     parser.add_argument("--lan", default="igc1")
     parser.add_argument("--stb-mac", required=True, type=mac_address)
     parser.add_argument("--group-ttl", type=int, default=180)
+    parser.add_argument("--leave-grace", type=int, default=5)
     args = parser.parse_args()
 
-    relay = IptvRelay(args.wan, args.lan, args.stb_mac, args.group_ttl)
+    relay = IptvRelay(args.wan, args.lan, args.stb_mac, args.group_ttl, args.leave_grace)
 
     def stop_handler(_signum, _frame):
         relay.running = False
