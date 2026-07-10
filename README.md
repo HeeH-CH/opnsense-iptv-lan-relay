@@ -94,6 +94,8 @@ tcpdump -ni <LAN_인터페이스> 'udp and dst net 233.0.0.0/8'
 
 셋톱박스가 leave 직후 같은 group에 다시 join하는 환경에서는 기본 5초 leave 유예가 짧은 stream 중단을 줄입니다. 필요하면 `iptv_relay_args`에 `--leave-grace 8`처럼 초 단위 값을 추가할 수 있습니다.
 
+`iptv_relay.rc`는 기본적으로 relay를 `nice -10` 우선순위로 실행합니다. 고비트레이트 장면에서 relay 처리 지연이 의심될 때를 위한 설정이며, 기본값을 바꿀 필요는 없습니다.
+
 ## 문제 해결
 
 | 증상 | 우선 확인할 내용 |
